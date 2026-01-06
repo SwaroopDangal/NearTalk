@@ -1,7 +1,7 @@
 import express from "express";
-import { ENV } from "./lib/env.js";
+import { ENV } from "./src/lib/env.js";
 import path from "path";
-import { connectDB } from "./lib/db.js";
+import { connectDB } from "./src/lib/db.js";
 
 import cors from "cors";
 
