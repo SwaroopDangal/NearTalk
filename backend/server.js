@@ -2,6 +2,7 @@ import express from "express";
 import { ENV } from "./src/lib/env.js";
 import path from "path";
 import { connectDB } from "./src/lib/db.js";
+import groupRoutes from "./src/routes/group.routes.js";
 
 import cors from "cors";
 
@@ -12,6 +13,8 @@ const __dirname = path.resolve();
 //middleware
 app.use(express.json());
 app.use(cors({ origin: ENV.CLIENT_URL, credentials: true }));
+
+app.use("/api/group", groupRoutes);
 
 if (ENV.NODE_ENV === "production") {
   app.use(express.static(path.join(__dirname, "../frontend/dist")));
