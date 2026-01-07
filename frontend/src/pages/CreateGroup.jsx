@@ -72,10 +72,10 @@ const Creategroup = () => {
             {/* Create Button */}
             <button
               onClick={handleCreate}
-              disabled={!groupName.trim()}
+              disabled={!groupName.trim() || isCreatingGroup}
               className="w-full bg-linear-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed text-white font-semibold py-4 px-8 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-[1.02] disabled:transform-none transition-all duration-200"
             >
-              Create Group
+              {isCreatingGroup ? "Creating..." : "Create Group"}
             </button>
           </div>
 
