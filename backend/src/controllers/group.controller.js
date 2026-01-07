@@ -3,7 +3,7 @@ import Group from "../models/group.models.js";
 export const createGroup = async (req, res) => {
   try {
     const { name, location } = req.body;
-    if (!name || !location?.coordinates) {
+    if (!name || !location) {
       return res.status(400).json({ message: "Name and location required" });
     }
 

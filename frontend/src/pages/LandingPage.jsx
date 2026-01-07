@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { MapPin, Users, Sparkles } from "lucide-react";
 import useGeolocation from "../hooks/useGeoLocation";
+import { useNavigate } from "react-router";
 
 const LandingPage = () => {
   const [username, setUsername] = useState("");
+  const navigate = useNavigate();
 
   const generateUsername = () => {
     const adjectives = [
@@ -38,9 +40,6 @@ const LandingPage = () => {
 
     setUsername(newUsername);
   };
-
-  const { location, error } = useGeolocation();
-  console.log(location);
 
   useEffect(() => {
     generateUsername();
@@ -93,12 +92,15 @@ const LandingPage = () => {
           <div className="space-y-4">
             <button className="w-full bg-linear-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold py-4 px-8 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200 flex items-center justify-center gap-3">
               <MapPin className="w-5 h-5" />
-              Find rooms near me
+              Find groups near me
             </button>
 
-            <button className="w-full bg-white hover:bg-gray-50 text-gray-800 font-semibold py-4 px-8 rounded-xl border-2 border-gray-200 hover:border-gray-300 shadow-md hover:shadow-lg transform hover:scale-[1.02] transition-all duration-200 flex items-center justify-center gap-3">
+            <button
+              className="w-full bg-white hover:bg-gray-50 text-gray-800 font-semibold py-4 px-8 rounded-xl border-2 border-gray-200 hover:border-gray-300 shadow-md hover:shadow-lg transform hover:scale-[1.02] transition-all duration-200 flex items-center justify-center gap-3"
+              onClick={() => navigate("/createGroup")}
+            >
               <Users className="w-5 h-5" />
-              Create a room
+              Create a group
             </button>
           </div>
 
