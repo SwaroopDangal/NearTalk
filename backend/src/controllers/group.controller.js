@@ -11,7 +11,7 @@ export const createGroup = async (req, res) => {
       name,
       location: {
         type: "Point",
-        coordinates: [Number(location.lng), Number(location.lat)],
+        coordinates: [Number(location.lat), Number(location.lng)],
       },
     });
     if (!group) return res.status(400).json({ message: "Group not created" });
@@ -30,7 +30,7 @@ export const getNearbyGroups = async (req, res) => {
         $near: {
           $geometry: {
             type: "Point",
-            coordinates: [lng, lat],
+            coordinates: [lat, lng],
           },
           $maxDistance: 5000,
         },
