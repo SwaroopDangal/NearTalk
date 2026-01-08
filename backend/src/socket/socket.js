@@ -1,31 +1,54 @@
 import Group from "../models/group.models.js";
 
-const groupUsers = {};
-// { groupId: Set(socketId) }
+const emitActiveUsers = (io, groupId) => {
+  const room = io.sockets.adapter.rooms.get(groupId);
+  const count = room ? room.size : 0;
 
-export default function initSocket(io) {
+  io.to(groupId).emit("active-users", count);
+};
+
+const handleLeave = async (io, socket, groupId, username) => {
+  socket.leave(groupId);
+
+  socket.to(groupId).emit("system-message", {
+    text: `${username} left`,
+  });
+
+  emitActiveUsers(io, groupId);
+
+  // 🔥 auto delete group when empty
+  const room = io.sockets.adapter.rooms.get(groupId);
+  const count = room ? room.size : 0;
+
+  if (count === 0) {
+    await Group.findByIdAndDelete(groupId);
+    console.log(`🗑️ group ${groupId} deleted`);
+  }
+};
+
+export const initSocket = (io) => {
   io.on("connection", (socket) => {
-    console.log("Socket connected:", socket.id);
+    console.log("🟢 socket connected:", socket.id);
 
-    socket.on("join-group", async ({ groupId, username }) => {
+    // ===== JOIN GROUP =====
+    socket.on("join-group", ({ groupId, username }) => {
+      if (!groupId) return;
+
       socket.join(groupId);
+      socket.data.groupId = groupId;
+      socket.data.username = username;
 
-      if (!groupUsers[groupId]) {
-        groupUsers[groupId] = new Set();
-      }
-
-      groupUsers[groupId].add(socket.id);
-
-      await Group.findByIdAndUpdate(groupId, {
-        $inc: { activeUsers: 1 },
-      });
-
-      io.to(groupId).emit("system-message", {
+      socket.to(groupId).emit("system-message", {
         text: `${username} joined`,
       });
+
+      emitActiveUsers(io, groupId);
     });
 
+    // ===== SEND MESSAGE (🔥 THIS WAS MISSING) =====
     socket.on("send-message", ({ groupId, text, username }) => {
+      if (!groupId || !text) return;
+
       io.to(groupId).emit("receive-message", {
         text,
         username,
@@ -33,21 +56,17 @@ export default function initSocket(io) {
       });
     });
 
-    socket.on("disconnect", async () => {
-      for (const groupId in groupUsers) {
-        if (groupUsers[groupId].has(socket.id)) {
-          groupUsers[groupId].delete(socket.id);
+    // ===== LEAVE GROUP =====
+    socket.on("leave-group", ({ groupId, username }) => {
+      handleLeave(io, socket, groupId, username);
+    });
 
-          await Group.findByIdAndUpdate(groupId, {
-            $inc: { activeUsers: -1 },
-          });
+    // ===== DISCONNECT =====
+    socket.on("disconnect", () => {
+      const { groupId, username } = socket.data;
+      if (!groupId) return;
 
-          if (groupUsers[groupId].size === 0) {
-            delete groupUsers[groupId];
-            await Group.findByIdAndDelete(groupId);
-          }
-        }
-      }
+      handleLeave(io, socket, groupId, username);
     });
   });
-}
+};

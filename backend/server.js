@@ -6,7 +6,7 @@ import path from "path";
 import { connectDB } from "./src/lib/db.js";
 import groupRoutes from "./src/routes/group.routes.js";
 import cors from "cors";
-import initSocket from "./src/socket/socket.js";
+import {initSocket} from "./src/socket/socket.js";
 
 const app = express();
 const __dirname = path.resolve();
