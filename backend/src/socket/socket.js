@@ -1,43 +1,67 @@
+import { Server } from "socket.io";
+import mongoose from "mongoose";
 import Group from "../models/group.models.js";
+import { ENV } from "../lib/env.js";
 
-const emitActiveUsers = (io, groupId) => {
-  const room = io.sockets.adapter.rooms.get(groupId);
-  const count = room ? room.size : 0;
+const deleteTimers = new Map();
 
-  io.to(groupId).emit("active-users", count);
-};
+export const initSocket = (httpServer) => {
+  console.log("🔥 initSocket CALLED");
 
-const handleLeave = async (io, socket, groupId, username) => {
-  socket.leave(groupId);
-
-  socket.to(groupId).emit("system-message", {
-    text: `${username} left`,
+  const io = new Server(httpServer, {
+    cors: {
+      origin: ENV.CLIENT_URL, // frontend URL
+      credentials: true,
+    },
   });
 
-  emitActiveUsers(io, groupId);
-
-  // 🔥 auto delete group when empty
-  const room = io.sockets.adapter.rooms.get(groupId);
-  const count = room ? room.size : 0;
-
-  if (count === 0) {
-    await Group.findByIdAndDelete(groupId);
-    console.log(`🗑️ group ${groupId} deleted`);
-  }
-};
-
-export const initSocket = (io) => {
   io.on("connection", (socket) => {
     console.log("🟢 socket connected:", socket.id);
 
-    // ===== JOIN GROUP =====
-    socket.on("join-group", ({ groupId, username }) => {
-      if (!groupId) return;
+    // -------------------------
+    // JOIN GROUP
+    // -------------------------
+    socket.on("join-group", async ({ groupId, username }) => {
+      console.log("➡️ join-group received:", { groupId, username });
 
+      if (!groupId || !username) {
+        console.warn("⛔ join-group rejected (missing data)");
+        return;
+      }
+
+      // Prevent duplicate join
+      if (socket.data.groupId === groupId) {
+        console.log("🔁 duplicate join ignored");
+        return;
+      }
+
+      // Validate MongoDB ID
+      if (!mongoose.Types.ObjectId.isValid(groupId)) {
+        socket.emit("group-not-found");
+        return;
+      }
+
+      const exists = await Group.exists({ _id: groupId });
+      if (!exists) {
+        socket.emit("group-not-found");
+        return;
+      }
+
+      // Cancel pending deletion if someone joins back
+      if (deleteTimers.has(groupId)) {
+        clearTimeout(deleteTimers.get(groupId));
+        deleteTimers.delete(groupId);
+        console.log("⏹️ Cancelled deletion timer for group:", groupId);
+      }
+
+      // Join room
       socket.join(groupId);
       socket.data.groupId = groupId;
       socket.data.username = username;
 
+      console.log("✅ Joined room:", groupId);
+
+      // Notify others
       socket.to(groupId).emit("system-message", {
         text: `${username} joined`,
       });
@@ -45,28 +69,72 @@ export const initSocket = (io) => {
       emitActiveUsers(io, groupId);
     });
 
-    // ===== SEND MESSAGE (🔥 THIS WAS MISSING) =====
+    // -------------------------
+    // SEND MESSAGE
+    // -------------------------
     socket.on("send-message", ({ groupId, text, username }) => {
-      if (!groupId || !text) return;
+      if (!text?.trim() || !groupId) return;
+      console.log("✉️ Message:", { groupId, text, username });
 
       io.to(groupId).emit("receive-message", {
         text,
         username,
-        time: new Date(),
+        time: Date.now(),
       });
     });
 
-    // ===== LEAVE GROUP =====
-    socket.on("leave-group", ({ groupId, username }) => {
-      handleLeave(io, socket, groupId, username);
-    });
-
-    // ===== DISCONNECT =====
+    // -------------------------
+    // DISCONNECT
+    // -------------------------
     socket.on("disconnect", () => {
       const { groupId, username } = socket.data;
-      if (!groupId) return;
+      console.log("🔴 socket disconnected:", socket.id, { groupId, username });
 
-      handleLeave(io, socket, groupId, username);
+      if (groupId && username) {
+        handleLeave(io, socket, groupId, username);
+      }
     });
   });
+
+  console.log("✅ Socket initialized");
+};
+
+// -------------------------
+// HELPERS
+// -------------------------
+const emitActiveUsers = (io, groupId) => {
+  const room = io.sockets.adapter.rooms.get(groupId);
+  const count = room ? room.size : 0;
+  console.log("👥 Active users in", groupId, ":", count);
+  io.to(groupId).emit("active-users", count);
+};
+
+const handleLeave = (io, socket, groupId, username) => {
+  socket.leave(groupId);
+  console.log("👋 handleLeave called for:", username, "in", groupId);
+
+  // Notify remaining users
+  socket.to(groupId).emit("system-message", {
+    text: `${username} left`,
+  });
+
+  emitActiveUsers(io, groupId);
+
+  // Start deletion timer if room empty
+  const room = io.sockets.adapter.rooms.get(groupId);
+  if (!room || room.size === 0) {
+    if (deleteTimers.has(groupId)) return; // already has timer
+
+    const timer = setTimeout(async () => {
+      const roomNow = io.sockets.adapter.rooms.get(groupId);
+      if (!roomNow || roomNow.size === 0) {
+        await Group.findByIdAndDelete(groupId);
+        console.log("🗑️ group deleted:", groupId);
+      }
+      deleteTimers.delete(groupId);
+    }, 5000); // 5 seconds
+
+    deleteTimers.set(groupId, timer);
+    console.log("⏳ Started deletion timer for group:", groupId);
+  }
 };
