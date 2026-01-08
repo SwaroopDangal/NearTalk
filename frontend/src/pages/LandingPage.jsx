@@ -7,39 +7,7 @@ const LandingPage = () => {
   const [username, setUsername] = useState("");
   const navigate = useNavigate();
 
-  const generateUsername = () => {
-    const adjectives = [
-      "Cool",
-      "Fast",
-      "Silent",
-      "Lazy",
-      "Happy",
-      "Brave",
-      "Swift",
-      "Clever",
-      "Mighty",
-      "Gentle",
-    ];
-    const animals = [
-      "Tiger",
-      "Panda",
-      "Fox",
-      "Eagle",
-      "Wolf",
-      "Bear",
-      "Hawk",
-      "Lion",
-      "Owl",
-      "Deer",
-    ];
-
-    const newUsername =
-      adjectives[Math.floor(Math.random() * adjectives.length)] +
-      animals[Math.floor(Math.random() * animals.length)] +
-      Math.floor(Math.random() * 1000);
-
-    setUsername(newUsername);
-  };
+ 
 
   useEffect(() => {
     generateUsername();
