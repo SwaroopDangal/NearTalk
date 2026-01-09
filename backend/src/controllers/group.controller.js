@@ -44,3 +44,15 @@ export const getNearbyGroups = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+export const getGroupInfoById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const group = await Group.findById(id);
+    if (!group) return res.status(404).json({ message: "Group not found" });
+    res.status(200).json(group);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: error.message });
+  }
+};
