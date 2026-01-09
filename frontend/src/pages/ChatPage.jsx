@@ -5,6 +5,7 @@ import useUsername from "../hooks/useUsername";
 import { Send, Users, Circle, ArrowLeft } from "lucide-react";
 import { toast } from "react-hot-toast";
 import useGetGroupInfoById from "../hooks/useGetGroupInfoById";
+import useGeolocation from "../hooks/useGeoLocation";
 
 export default function ChatPage() {
   const navigate = useNavigate();
@@ -12,11 +13,44 @@ export default function ChatPage() {
   const { username } = useUsername();
   const { groupData, groupIsLoading } = useGetGroupInfoById(groupId);
   console.log(groupData);
+  const { location } = useGeolocation();
 
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
   const [activeUsers, setActiveUsers] = useState(0);
   const messagesEndRef = useRef(null);
+
+  function getDistanceKm(lat1, lng1, lat2, lng2) {
+    const R = 6371; // Earth radius in km
+
+    const toRad = (deg) => deg * (Math.PI / 180);
+
+    const dLat = toRad(lat2 - lat1);
+    const dLng = toRad(lng2 - lng1);
+
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c; // distance in km
+  }
+
+  useEffect(() => {
+    if (location) {
+      const distance = getDistanceKm(
+        Number(location.lat),
+        Number(location.lng),
+        Number(groupData.location.coordinates[0]),
+        Number(groupData.location.coordinates[1])
+      );
+      if (distance > 5) {
+        toast.error("You are too far away from the group!");
+        navigate(`/nearbyGroups`);
+      }
+    }
+  }, [location, groupData]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
