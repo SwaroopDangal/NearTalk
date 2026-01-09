@@ -17,10 +17,6 @@ const groupSchema = new mongoose.Schema(
         required: true,
       },
     },
-    activeUsers: {
-      type: Number,
-      default: 0,
-    },
   },
   { timestamps: true }
 );

@@ -1,6 +1,7 @@
 import express from "express";
 import {
   createGroup,
+  getGroupInfoById,
   getNearbyGroups,
 } from "../controllers/group.controller.js";
 
