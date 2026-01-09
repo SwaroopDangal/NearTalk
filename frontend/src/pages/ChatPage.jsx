@@ -38,6 +38,7 @@ export default function ChatPage() {
   }
 
   useEffect(() => {
+    if (!location || !groupData?.location?.coordinates) return;
     if (location) {
       const distance = getDistanceKm(
         Number(location.lat),
