@@ -1,33 +1,38 @@
 import { useEffect, useState, useRef } from "react";
-import { useParams } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import socket from "../lib/socket";
 import useUsername from "../hooks/useUsername";
 import { Send, Users } from "lucide-react";
+import { toast } from "react-hot-toast";
 
 export default function ChatPage() {
+  const navigate = useNavigate();
   const { id: groupId } = useParams();
-  const username = useUsername();
+  const { username } = useUsername(); // ✅ FIXED
 
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
-  const messagesEndRef = useRef(null);
   const [activeUsers, setActiveUsers] = useState(0);
-
-  // Auto scroll
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  const messagesEndRef = useRef(null);
 
   useEffect(() => {
-    scrollToBottom();
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Socket lifecycle (CORRECT)
   useEffect(() => {
-    if (!groupId) return;
+    if (!groupId || !username) {
+      return;
+    }
+
+    if (!socket.connected) {
+      socket.connect();
+    }
 
     socket.emit("join-group", { groupId, username });
 
+    // ------------------------------
+    // SOCKET EVENT HANDLERS
+    // ------------------------------
     const handleReceive = (msg) => {
       setMessages((prev) => [...prev, msg]);
     };
@@ -36,25 +41,32 @@ export default function ChatPage() {
       setMessages((prev) => [...prev, { ...msg, system: true }]);
     };
 
+    const handleActiveUsers = (count) => {
+      setActiveUsers(count);
+    };
+
+    const handleGroupNotFound = () => {
+      toast.error("Group not found!");
+      navigate("/");
+    };
+
     socket.on("receive-message", handleReceive);
     socket.on("system-message", handleSystem);
+    socket.on("active-users", handleActiveUsers);
+    socket.on("group-not-found", handleGroupNotFound); // ✅ listen
 
+    // ------------------------------
+    // CLEANUP
+    // ------------------------------
     return () => {
       socket.off("receive-message", handleReceive);
       socket.off("system-message", handleSystem);
-      socket.emit("leave-group", { groupId, username });
+      socket.off("active-users", handleActiveUsers);
+      socket.off("group-not-found", handleGroupNotFound);
+      socket.disconnect();
     };
-  }, [groupId]); // ❗ username must NOT be dependency
+  }, [groupId, username]);
 
-  useEffect(() => {
-    socket.on("active-users", setActiveUsers);
-
-    return () => {
-      socket.off("active-users", setActiveUsers);
-    };
-  }, []);
-
-  // Send message (optimistic UI)
   const sendMessage = (e) => {
     e?.preventDefault();
     if (!text.trim()) return;

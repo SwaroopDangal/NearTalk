@@ -1,17 +1,16 @@
 import React, { useEffect, useState } from "react";
 import { MapPin, Users, Sparkles } from "lucide-react";
-import useGeolocation from "../hooks/useGeoLocation";
 import { useNavigate } from "react-router";
+import useUsername from "../hooks/useUsername";
+import useGeolocation from "../hooks/useGeoLocation";
 
 const LandingPage = () => {
-  const [username, setUsername] = useState("");
   const navigate = useNavigate();
 
- 
+  const { username, regenerate } = useUsername();
 
-  useEffect(() => {
-    generateUsername();
-  }, []);
+  const { location } = useGeolocation();
+  if (!username) return null;
 
   return (
     <div className="min-h-screen bg-linear-to-br from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center p-4">
@@ -48,7 +47,7 @@ const LandingPage = () => {
               <div className="text-2xl font-bold text-gray-800">{username}</div>
 
               <button
-                onClick={generateUsername}
+                onClick={regenerate}
                 className="text-sm text-indigo-600 hover:text-indigo-700 font-medium hover:underline transition-all"
               >
                 Regenerate

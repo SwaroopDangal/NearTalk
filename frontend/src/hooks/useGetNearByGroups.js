@@ -11,6 +11,7 @@ const useNearbyGroups = (lng, lat) => {
       onError: (error) => {
         toast.error(error.response?.data?.message || "Failed to load groups");
       },
+      retry: false,
     }
   );
 

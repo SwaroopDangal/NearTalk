@@ -6,8 +6,6 @@ import { ENV } from "../lib/env.js";
 const deleteTimers = new Map();
 
 export const initSocket = (httpServer) => {
-  console.log("🔥 initSocket CALLED");
-
   const io = new Server(httpServer, {
     cors: {
       origin: ENV.CLIENT_URL, // frontend URL
@@ -16,22 +14,16 @@ export const initSocket = (httpServer) => {
   });
 
   io.on("connection", (socket) => {
-    console.log("🟢 socket connected:", socket.id);
-
     // -------------------------
     // JOIN GROUP
     // -------------------------
     socket.on("join-group", async ({ groupId, username }) => {
-      console.log("➡️ join-group received:", { groupId, username });
-
       if (!groupId || !username) {
-        console.warn("⛔ join-group rejected (missing data)");
         return;
       }
 
       // Prevent duplicate join
       if (socket.data.groupId === groupId) {
-        console.log("🔁 duplicate join ignored");
         return;
       }
 
@@ -51,15 +43,12 @@ export const initSocket = (httpServer) => {
       if (deleteTimers.has(groupId)) {
         clearTimeout(deleteTimers.get(groupId));
         deleteTimers.delete(groupId);
-        console.log("⏹️ Cancelled deletion timer for group:", groupId);
       }
 
       // Join room
       socket.join(groupId);
       socket.data.groupId = groupId;
       socket.data.username = username;
-
-      console.log("✅ Joined room:", groupId);
 
       // Notify others
       socket.to(groupId).emit("system-message", {
@@ -74,7 +63,6 @@ export const initSocket = (httpServer) => {
     // -------------------------
     socket.on("send-message", ({ groupId, text, username }) => {
       if (!text?.trim() || !groupId) return;
-      console.log("✉️ Message:", { groupId, text, username });
 
       io.to(groupId).emit("receive-message", {
         text,
@@ -88,15 +76,12 @@ export const initSocket = (httpServer) => {
     // -------------------------
     socket.on("disconnect", () => {
       const { groupId, username } = socket.data;
-      console.log("🔴 socket disconnected:", socket.id, { groupId, username });
 
       if (groupId && username) {
         handleLeave(io, socket, groupId, username);
       }
     });
   });
-
-  console.log("✅ Socket initialized");
 };
 
 // -------------------------
@@ -105,13 +90,11 @@ export const initSocket = (httpServer) => {
 const emitActiveUsers = (io, groupId) => {
   const room = io.sockets.adapter.rooms.get(groupId);
   const count = room ? room.size : 0;
-  console.log("👥 Active users in", groupId, ":", count);
   io.to(groupId).emit("active-users", count);
 };
 
 const handleLeave = (io, socket, groupId, username) => {
   socket.leave(groupId);
-  console.log("👋 handleLeave called for:", username, "in", groupId);
 
   // Notify remaining users
   socket.to(groupId).emit("system-message", {
@@ -129,12 +112,10 @@ const handleLeave = (io, socket, groupId, username) => {
       const roomNow = io.sockets.adapter.rooms.get(groupId);
       if (!roomNow || roomNow.size === 0) {
         await Group.findByIdAndDelete(groupId);
-        console.log("🗑️ group deleted:", groupId);
       }
       deleteTimers.delete(groupId);
     }, 5000); // 5 seconds
 
     deleteTimers.set(groupId, timer);
-    console.log("⏳ Started deletion timer for group:", groupId);
   }
 };

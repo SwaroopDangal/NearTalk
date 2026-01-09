@@ -19,7 +19,6 @@ const NearByGroups = () => {
       return {
         id: group._id,
         name: group.name,
-        members: group.activeUsers,
         distance: Math.round(
           getDistanceKm(
             Number(location.lat),
@@ -52,7 +51,7 @@ const NearByGroups = () => {
 
   const handleJoinGroup = (groupId, groupName) => {
     console.log(`Joining group: ${groupName} (ID: ${groupId})`);
-    // Handle join logic here
+    navigate(`/group/${groupId}`);
   };
   if (isNearbyGroupsLoading) return <LoaderComponent fullScreen={false} />;
 
@@ -102,11 +101,6 @@ const NearByGroups = () => {
                   </div>
 
                   <div className="flex items-center gap-4 text-sm text-gray-600 flex-wrap">
-                    <span className="flex items-center gap-1">
-                      <Users className="w-4 h-4" />
-                      {group.members}{" "}
-                      {group.members === 1 ? "member" : "members"}
-                    </span>
                     <span className="flex items-center gap-1">
                       <MapPin className="w-4 h-4" />
                       {group.distance} km away
