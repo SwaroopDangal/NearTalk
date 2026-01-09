@@ -16,3 +16,8 @@ export const getNearbyGroups = async ({ lng, lat }) => {
   });
   return response.data;
 };
+
+export const getGroupInfoById = async (id) => {
+  const response = await axiosInstance.get(`/group/${id}`);
+  return response.data;
+};

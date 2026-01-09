@@ -2,13 +2,16 @@ import { useEffect, useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router";
 import socket from "../lib/socket";
 import useUsername from "../hooks/useUsername";
-import { Send, Users } from "lucide-react";
+import { Send, Users, Circle, ArrowLeft } from "lucide-react";
 import { toast } from "react-hot-toast";
+import useGetGroupInfoById from "../hooks/useGetGroupInfoById";
 
 export default function ChatPage() {
   const navigate = useNavigate();
   const { id: groupId } = useParams();
-  const { username } = useUsername(); // ✅ FIXED
+  const { username } = useUsername();
+  const { groupData, groupIsLoading } = useGetGroupInfoById(groupId);
+  console.log(groupData);
 
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
@@ -53,7 +56,7 @@ export default function ChatPage() {
     socket.on("receive-message", handleReceive);
     socket.on("system-message", handleSystem);
     socket.on("active-users", handleActiveUsers);
-    socket.on("group-not-found", handleGroupNotFound); // ✅ listen
+    socket.on("group-not-found", handleGroupNotFound);
 
     // ------------------------------
     // CLEANUP
@@ -88,37 +91,74 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-linear-to-br from-slate-50 to-slate-100">
+    <div className="flex flex-col h-screen bg-linear-to-br from-indigo-50 via-white to-cyan-50 relative overflow-hidden">
+      {/* Ambient Background Effects */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-linear-to-br from-violet-200/30 to-transparent rounded-full blur-3xl animate-pulse"></div>
+        <div
+          className="absolute bottom-0 right-1/4 w-96 h-96 bg-linear-to-tl from-cyan-200/30 to-transparent rounded-full blur-3xl animate-pulse"
+          style={{ animationDelay: "1s" }}
+        ></div>
+      </div>
+
       {/* Header */}
-      <div className="bg-white border-b border-slate-200 shadow-sm">
-        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center gap-3">
-          <div className="bg-blue-500 p-2 rounded-lg">
-            <Users className="w-5 h-5 text-white" />
+      <div className="relative bg-white/80 backdrop-blur-xl border-b border-slate-200/50 shadow-sm">
+        <div className="max-w-5xl mx-auto px-6 py-5 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => navigate("/")}
+              className="group bg-linear-to-br from-slate-100 to-slate-200 hover:from-slate-200 hover:to-slate-300 p-2.5 rounded-xl transition-all duration-300 hover:shadow-lg"
+            >
+              <ArrowLeft className="w-5 h-5 text-slate-600 group-hover:text-slate-800 group-hover:-translate-x-0.5 transition-all" />
+            </button>
+            <div className="relative">
+              <div className="absolute inset-0 bg-linear-to-br from-violet-500 to-indigo-600 rounded-2xl blur-sm opacity-50"></div>
+              <div className="relative bg-linear-to-br from-violet-500 to-indigo-600 p-3 rounded-2xl shadow-lg">
+                <Users className="w-6 h-6 text-white" />
+              </div>
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold bg-linear-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">
+                {groupData?.name || "Group Chat"}
+              </h1>
+            </div>
           </div>
-          <div>
-            <h3 className="text-lg font-semibold text-slate-800">Group Chat</h3>
-            <p className="text-sm text-slate-500">Room: {groupId}</p>
-            <p className="text-sm text-slate-500">
-              Active Users: {activeUsers}
-            </p>
+
+          <div className="flex items-center gap-2 bg-linear-to-r from-emerald-50 to-teal-50 px-4 py-2 rounded-full border border-emerald-200/50">
+            <div className="relative flex items-center justify-center">
+              <Circle className="w-2.5 h-2.5 fill-emerald-500 text-emerald-500 animate-pulse" />
+              <div className="absolute inset-0 rounded-full bg-emerald-400/30 animate-ping"></div>
+            </div>
+            <span className="text-sm font-semibold text-emerald-700">
+              {activeUsers} online
+            </span>
           </div>
         </div>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-6">
-        <div className="max-w-4xl mx-auto space-y-4">
+      <div className="relative flex-1 overflow-y-auto px-4 py-8">
+        <div className="max-w-4xl mx-auto space-y-6">
           {messages.length === 0 ? (
-            <div className="text-center text-slate-400 mt-8">
-              <p className="text-lg">No messages yet</p>
-              <p className="text-sm">Start the conversation!</p>
+            <div className="text-center mt-20 space-y-4">
+              <div className="inline-flex p-6 bg-linear-to-br from-violet-100 to-indigo-100 rounded-3xl shadow-xl">
+                <Send className="w-12 h-12 text-violet-500" />
+              </div>
+              <div>
+                <p className="text-xl font-semibold text-slate-700">
+                  No messages yet
+                </p>
+                <p className="text-slate-500 mt-1">
+                  Be the first to say hello!
+                </p>
+              </div>
             </div>
           ) : (
             messages.map((m, i) => (
-              <div key={i}>
+              <div key={i} className="animate-[fadeIn_0.3s_ease-out]">
                 {m.system ? (
                   <div className="flex justify-center">
-                    <div className="bg-slate-200 text-slate-600 text-xs px-4 py-2 rounded-full">
+                    <div className="bg-linear-to-r from-slate-100 to-slate-200 text-slate-600 text-sm px-5 py-2.5 rounded-full shadow-sm border border-slate-300/50 font-medium">
                       {m.text}
                     </div>
                   </div>
@@ -128,19 +168,26 @@ export default function ChatPage() {
                       m.username === username ? "justify-end" : "justify-start"
                     }`}
                   >
-                    <div
-                      className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl ${
-                        m.username === username
-                          ? "bg-blue-500 text-white rounded-br-sm"
-                          : "bg-white text-slate-800 rounded-bl-sm shadow-sm"
-                      }`}
-                    >
+                    <div className="flex flex-col gap-1 max-w-md">
                       {m.username !== username && (
-                        <p className="text-xs font-semibold mb-1 text-blue-600">
+                        <span className="text-xs font-bold text-violet-600 px-2">
                           {m.username}
-                        </p>
+                        </span>
                       )}
-                      <p className="wrap-break">{m.text}</p>
+                      <div
+                        className={`px-5 py-3 rounded-3xl shadow-lg transition-all hover:shadow-xl ${
+                          m.username === username
+                            ? "bg-linear-to-br from-violet-500 to-indigo-600 text-white rounded-br-md"
+                            : "bg-white text-slate-800 rounded-bl-md border border-slate-200/50"
+                        }`}
+                      >
+                        <p className="leading-relaxed break-words">{m.text}</p>
+                      </div>
+                      {m.username === username && (
+                        <span className="text-xs text-slate-400 text-right px-2">
+                          You
+                        </span>
+                      )}
                     </div>
                   </div>
                 )}
@@ -152,27 +199,43 @@ export default function ChatPage() {
       </div>
 
       {/* Input */}
-      <div className="bg-white border-t border-slate-200 shadow-lg">
-        <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="flex gap-3">
-            <input
-              type="text"
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Type a message..."
-              className="flex-1 px-4 py-3 border border-slate-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+      <div className="relative bg-white/80 backdrop-blur-xl border-t border-slate-200/50 shadow-2xl">
+        <div className="max-w-4xl mx-auto px-6 py-6">
+          <div className="flex gap-3 items-end">
+            <div className="flex-1 relative">
+              <input
+                type="text"
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Type your message..."
+                className="w-full px-6 py-4 bg-linear-to-r from-slate-50 to-slate-100 border-2 border-slate-300 rounded-3xl focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all placeholder:text-slate-400 text-slate-800 shadow-inner"
+              />
+            </div>
             <button
               onClick={sendMessage}
               disabled={!text.trim()}
-              className="bg-blue-500 text-white p-3 rounded-full hover:bg-blue-600 disabled:bg-slate-300"
+              className="relative group bg-linear-to-br from-violet-500 to-indigo-600 text-white p-4 rounded-2xl hover:shadow-xl disabled:from-slate-300 disabled:to-slate-400 transition-all duration-300 disabled:cursor-not-allowed"
             >
-              <Send className="w-5 h-5" />
+              <div className="absolute inset-0 bg-linear-to-br from-violet-400 to-indigo-500 rounded-2xl blur opacity-0 group-hover:opacity-50 transition-opacity"></div>
+              <Send className="w-6 h-6 relative z-10 group-hover:scale-110 transition-transform" />
             </button>
           </div>
         </div>
       </div>
+
+      <style jsx>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
     </div>
   );
 }
